@@ -220,10 +220,15 @@ function App() {
       if (!supabaseClient) return;
 
       const remotePortfolio = await fetchPortfolioFromSupabase();
-      if (!active || !remotePortfolio) return;
+      if (!active) return;
 
-      setPortfolio(remotePortfolio);
       hasLoadedRemotePortfolio.current = true;
+
+      if (remotePortfolio) {
+        setPortfolio(remotePortfolio);
+      } else {
+        setPortfolio((current) => (current && current.length ? current : defaultPortfolio));
+      }
     };
 
     loadRemotePortfolio();
