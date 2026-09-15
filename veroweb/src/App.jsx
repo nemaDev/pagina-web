@@ -585,9 +585,22 @@ function App() {
         setLoginError("Las contraseñas no coinciden.");
         return;
       }
+
+      if (!userEmails.some((registeredEmail) => registeredEmail.toLowerCase() === email)) {
+        setLoginError("Este correo no está autorizado. Pide al administrador que lo agregue en Usuarios antes de registrarte.");
+        return;
+      }
     }
 
     if (supabaseClient) {
+      if (
+        authMode === "login" &&
+        !userEmails.some((registeredEmail) => registeredEmail.toLowerCase() === email)
+      ) {
+        setLoginError("Este correo no tiene acceso al panel. Pide al administrador que lo autorice en Usuarios.");
+        return;
+      }
+
       const result = authMode === "register"
         ? await supabaseClient.auth.signUp({ email, password: loginData.password })
         : await supabaseClient.auth.signInWithPassword({ email, password: loginData.password });
@@ -614,7 +627,6 @@ function App() {
       }
 
       if (authMode === "register" && !result.data.session) {
-        setUserEmails((prev) => (prev.includes(email) ? prev : [...prev, email]));
         setAuthNotice(`Cuenta creada para ${email}. Revisa tu correo electrónico y confirma el enlace para activar tu acceso. Después vuelve aquí e inicia sesión.`);
         setLoginError("");
         setAuthMode("login");
