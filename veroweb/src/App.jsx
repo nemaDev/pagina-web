@@ -184,6 +184,19 @@ const getInitialCategoryVisibility = () => {
   }
 };
 
+const mapSupabaseCategories = (rows = []) => {
+  const visible = {};
+  const names = rows
+    .sort((first, second) => (first.order_index || 0) - (second.order_index || 0))
+    .map((row) => {
+      visible[row.name] = row.visible !== false;
+      return row.name;
+    })
+    .filter(Boolean);
+
+  return { names, visible };
+};
+
 const mapSupabaseRows = (rows = []) =>
   normalizePortfolio(
     rows.map((row) => ({
@@ -234,6 +247,40 @@ const savePortfolioToSupabase = async (items) => {
   }
 };
 
+const fetchCategoriesFromSupabase = async () => {
+  if (!supabaseClient) return null;
+
+  const { data, error } = await supabaseClient
+    .from("portfolio_categories")
+    .select("name, visible, order_index")
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    console.warn("No se pudieron cargar las categorías desde Supabase:", error.message);
+    return null;
+  }
+
+  return data ? mapSupabaseCategories(data) : null;
+};
+
+const saveCategoriesToSupabase = async (categories, categoryVisibility) => {
+  if (!supabaseClient || !categories.length) return;
+
+  const rows = categories.map((name, index) => ({
+    name,
+    visible: categoryVisibility[name] !== false,
+    order_index: index,
+  }));
+
+  const { error } = await supabaseClient.from("portfolio_categories").upsert(rows, {
+    onConflict: "name",
+  });
+
+  if (error) {
+    console.warn("No se pudieron guardar las categorías en Supabase:", error.message);
+  }
+};
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [portfolio, setPortfolio] = useState(getInitialPortfolio);
@@ -241,6 +288,7 @@ function App() {
   const [categoryVisibility, setCategoryVisibility] = useState(getInitialCategoryVisibility);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const hasLoadedRemotePortfolio = useRef(false);
+  const hasLoadedRemoteCategories = useRef(false);
   const [isAdminRoute, setIsAdminRoute] = useState(() =>
     typeof window !== "undefined" ? isAdminPath(window.location.pathname) : false
   );
@@ -305,10 +353,37 @@ function App() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+
+    const loadRemoteCategories = async () => {
+      const remoteCategories = await fetchCategoriesFromSupabase();
+      if (!active || !remoteCategories) return;
+
+      if (remoteCategories.names.length) {
+        setCategories(remoteCategories.names);
+        setCategoryVisibility(remoteCategories.visible);
+      }
+      hasLoadedRemoteCategories.current = true;
+    };
+
+    loadRemoteCategories();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!supabaseClient || !hasLoadedRemotePortfolio.current) return;
 
     savePortfolioToSupabase(portfolio);
   }, [portfolio]);
+
+  useEffect(() => {
+    if (!supabaseClient || !hasLoadedRemoteCategories.current) return;
+
+    saveCategoriesToSupabase(categories, categoryVisibility);
+  }, [categories, categoryVisibility]);
 
   useEffect(() => {
     const handleScroll = () => {
