@@ -11,8 +11,10 @@ import About from "./components/About";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 import AdminPanel from "./components/AdminPanel";
+import { DEFAULT_CATEGORIES } from "./data/categories";
 
 const STORAGE_KEY = "bajo-mi-lente-portfolio";
+const CATEGORIES_STORAGE_KEY = "bajo-mi-lente-categories";
 const ADMIN_LOGIN_KEY = "bajo-mi-lente-admin-auth";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "bajomilente";
@@ -138,6 +140,37 @@ const getInitialPortfolio = () => {
   }
 };
 
+const getInitialCategories = () => {
+  if (typeof window === "undefined") return DEFAULT_CATEGORIES;
+
+  const saved = window.localStorage.getItem(CATEGORIES_STORAGE_KEY);
+  const savedPortfolio = window.localStorage.getItem(STORAGE_KEY);
+  let portfolioCategories = [];
+
+  try {
+    const parsedPortfolio = savedPortfolio ? JSON.parse(savedPortfolio) : [];
+    portfolioCategories = Array.isArray(parsedPortfolio)
+      ? parsedPortfolio.map((item) => item.category).filter(Boolean)
+      : [];
+  } catch {
+    portfolioCategories = [];
+  }
+
+  if (!saved) return [...new Set([...DEFAULT_CATEGORIES, ...portfolioCategories])];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) && parsed.length
+      ? [...new Set([
+          ...parsed.filter((category) => typeof category === "string" && category.trim()),
+          ...portfolioCategories,
+        ])]
+      : [...new Set([...DEFAULT_CATEGORIES, ...portfolioCategories])];
+  } catch {
+    return [...new Set([...DEFAULT_CATEGORIES, ...portfolioCategories])];
+  }
+};
+
 const mapSupabaseRows = (rows = []) =>
   normalizePortfolio(
     rows.map((row) => ({
@@ -191,6 +224,7 @@ const savePortfolioToSupabase = async (items) => {
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [portfolio, setPortfolio] = useState(getInitialPortfolio);
+  const [categories, setCategories] = useState(getInitialCategories);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const hasLoadedRemotePortfolio = useRef(false);
   const [isAdminRoute, setIsAdminRoute] = useState(() =>
@@ -212,6 +246,16 @@ function App() {
       console.warn("No se pudo guardar el portafolio en localStorage:", error);
     }
   }, [portfolio]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      window.localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
+    } catch (error) {
+      console.warn("No se pudieron guardar las categorías en localStorage:", error);
+    }
+  }, [categories]);
 
   useEffect(() => {
     let active = true;
@@ -323,7 +367,13 @@ function App() {
       <main>
         {isAdminRoute ? (
           isAuthenticated ? (
-            <AdminPanel items={portfolio} setItems={setPortfolio} onClose={handleLogout} />
+            <AdminPanel
+              items={portfolio}
+              setItems={setPortfolio}
+              categories={categories}
+              setCategories={setCategories}
+              onClose={handleLogout}
+            />
           ) : (
             <section className="admin-login-screen">
               <form className="admin-login-card" onSubmit={handleLogin}>
@@ -365,7 +415,7 @@ function App() {
         ) : (
           <>
             <Hero />
-            <Portfolio items={portfolio} />
+            <Portfolio items={portfolio} categories={categories} />
             <Services />
             <About />
             <Contact />

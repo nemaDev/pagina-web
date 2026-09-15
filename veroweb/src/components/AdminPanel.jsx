@@ -1,31 +1,58 @@
 import { useMemo, useState } from "react";
+import { DEFAULT_CATEGORIES } from "../data/categories";
 
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 const defaultForm = {
-  category: "Deportes",
+  category: DEFAULT_CATEGORIES[0],
   title: "",
   image: "",
 };
 
-const categories = ["Deportes", "Retratos", "Eventos", "Automotriz"];
-
-function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
+function AdminPanel({
+  items = [],
+  setItems = () => {},
+  categories = DEFAULT_CATEGORIES,
+  setCategories = () => {},
+  onClose = () => {},
+}) {
   const [formData, setFormData] = useState(defaultForm);
   const [editingId, setEditingId] = useState(null);
   const [filter, setFilter] = useState("Todos");
   const [notice, setNotice] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [categoryNotice, setCategoryNotice] = useState("");
 
   const availableCategories = useMemo(
     () => [...new Set([...categories, ...items.map((item) => item.category).filter(Boolean)])],
-    [items]
+    [categories, items]
   );
 
-  const visibleItems =
-    filter === "Todos" ? items : items.filter((item) => item.category === filter);
+  const visibleItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const matchesFilter = filter === "Todos" || item.category === filter;
+      const matchesSearch =
+        !normalizedSearch ||
+        (item.title || "").toLowerCase().includes(normalizedSearch) ||
+        (item.category || "").toLowerCase().includes(normalizedSearch);
+
+      return matchesFilter && matchesSearch;
+    });
+  }, [filter, items, search]);
+
+  const categoryCounts = useMemo(
+    () => categories.map((category) => ({
+      name: category,
+      count: items.filter((item) => item.category === category).length,
+    })),
+    [categories, items]
+  );
 
   const updateForm = (event) => {
     const { name, value } = event.target;
@@ -72,10 +99,64 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
   };
 
   const resetForm = () => {
-    setFormData(defaultForm);
+    setFormData({ ...defaultForm, category: availableCategories[0] || DEFAULT_CATEGORIES[0] });
     setEditingId(null);
     setNotice("");
     setPendingDeleteId(null);
+  };
+
+  const handleCreateCategory = (event) => {
+    event.preventDefault();
+    const name = newCategory.trim();
+
+    if (!name) {
+      setCategoryNotice("Escribe un nombre para la categoría.");
+      return;
+    }
+
+    if (availableCategories.some((category) => category.toLowerCase() === name.toLowerCase())) {
+      setCategoryNotice("Esa categoría ya existe.");
+      return;
+    }
+
+    setCategories((prev) => [...prev, name]);
+    setFormData((prev) => ({ ...prev, category: name }));
+    setNewCategory("");
+    setCategoryNotice("");
+  };
+
+  const handleRenameCategory = (category) => {
+    const name = window.prompt("Nuevo nombre de la categoría", category)?.trim();
+    if (!name || name === category) return;
+
+    if (availableCategories.some((item) => item !== category && item.toLowerCase() === name.toLowerCase())) {
+      setCategoryNotice("Esa categoría ya existe.");
+      return;
+    }
+
+    setCategories((prev) => prev.map((item) => (item === category ? name : item)));
+    setItems((prev) => prev.map((item) => (item.category === category ? { ...item, category: name } : item)));
+    if (filter === category) setFilter(name);
+    if (formData.category === category) setFormData((prev) => ({ ...prev, category: name }));
+    setCategoryNotice("");
+  };
+
+  const handleDeleteCategory = (category) => {
+    const count = items.filter((item) => item.category === category).length;
+    if (count) {
+      setCategoryNotice(`No puedes eliminar “${category}” porque contiene ${count} ${count === 1 ? "foto" : "fotos"}.`);
+      return;
+    }
+
+    if (categories.length <= 1) {
+      setCategoryNotice("Debe existir al menos una categoría.");
+      return;
+    }
+
+    setCategories((prev) => prev.filter((item) => item !== category));
+    if (filter === category) setFilter("Todos");
+    if (formData.category === category) resetForm();
+    setCategoryNotice("");
   };
 
   const handleSubmit = (event) => {
@@ -234,8 +315,48 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
         </form>
 
         <div className="admin-list">
+          <div className="admin-stats" aria-label="Resumen del portafolio">
+            <div><strong>{items.length}</strong><span>Fotos</span></div>
+            <div><strong>{categories.length}</strong><span>Categorías</span></div>
+            <div><strong>{items.filter((item) => item.image).length}</strong><span>Con imagen</span></div>
+          </div>
+
+          <div className="admin-categories">
+            <div className="admin-list-header">
+              <div>
+                <div className="section-label">ORGANIZACIÓN</div>
+                <h3>Categorías</h3>
+              </div>
+            </div>
+            <form className="admin-category-form" onSubmit={handleCreateCategory}>
+              <input
+                type="text"
+                value={newCategory}
+                onChange={(event) => setNewCategory(event.target.value)}
+                placeholder="Nueva categoría"
+                aria-label="Nombre de la nueva categoría"
+              />
+              <button type="submit" className="button button-outline-dark">Añadir</button>
+            </form>
+            {categoryNotice && <p className="admin-category-notice">{categoryNotice}</p>}
+            <div className="admin-category-list">
+              {categoryCounts.map(({ name, count }) => (
+                <div className="admin-category-row" key={name}>
+                  <span><strong>{name}</strong><small>{count} {count === 1 ? "foto" : "fotos"}</small></span>
+                  <div>
+                    <button type="button" onClick={() => handleRenameCategory(name)}>Renombrar</button>
+                    <button type="button" className="danger" onClick={() => handleDeleteCategory(name)}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="admin-list-header">
-            <h3>Imágenes del portafolio</h3>
+            <div>
+              <div className="section-label">BIBLIOTECA</div>
+              <h3>Imágenes del portafolio</h3>
+            </div>
 
             <select value={filter} onChange={(event) => setFilter(event.target.value)}>
               <option value="Todos">Todos</option>
@@ -247,8 +368,19 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
             </select>
           </div>
 
+          <input
+            className="admin-search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por título o categoría..."
+            aria-label="Buscar fotografías"
+          />
+
           {visibleItems.length === 0 ? (
-            <p className="admin-empty">No hay imágenes cargadas todavía.</p>
+            <p className="admin-empty">
+              {items.length ? "No hay resultados para esta búsqueda." : "No hay imágenes cargadas todavía."}
+            </p>
           ) : (
             <div className="admin-items">
               {visibleItems.map((item) => (

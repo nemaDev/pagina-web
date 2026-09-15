@@ -1,0 +1,1 @@
+export const DEFAULT_CATEGORIES = ["Deportes", "Retratos", "Eventos", "Automotriz"];

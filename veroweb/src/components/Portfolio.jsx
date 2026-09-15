@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 
-const categories = ["Deportes", "Retratos", "Eventos", "Automotriz"];
-
-function Portfolio({ items = [] }) {
+function Portfolio({ items = [], categories = [] }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeSubtype, setActiveSubtype] = useState("Todos");

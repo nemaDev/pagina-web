@@ -1060,6 +1060,114 @@ img {
   gap: 20px;
 }
 
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-stats > div {
+  display: grid;
+  gap: 5px;
+  padding: 18px;
+  background: #111;
+  color: #fff;
+}
+
+.admin-stats strong {
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.admin-stats span,
+.admin-category-row small {
+  color: #a7a7a7;
+  font-size: 10px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.admin-categories {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.admin-category-form {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-category-form input,
+.admin-search {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(17, 17, 17, 0.18);
+  background: #fff;
+  padding: 0 14px;
+  font: inherit;
+  color: #111;
+}
+
+.admin-category-form .button {
+  flex: 0 0 auto;
+}
+
+.admin-category-notice {
+  margin: 0;
+  color: #7a1f1f;
+  font-size: 12px;
+}
+
+.admin-category-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+}
+
+.admin-category-row > span {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-category-row strong {
+  font-weight: 400;
+}
+
+.admin-category-row > div {
+  display: flex;
+  gap: 12px;
+}
+
+.admin-category-row button {
+  border: 0;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.admin-category-row .danger {
+  color: #8a2d2d;
+}
+
+.admin-search {
+  margin-top: -4px;
+}
+
 .admin-list-header {
   display: flex;
   align-items: center;
@@ -1199,6 +1307,19 @@ img {
 }
 
 @media (max-width: 640px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-category-form {
+    flex-direction: column;
+  }
+
+  .admin-category-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .admin-grid {
     grid-template-columns: 1fr;
   }
