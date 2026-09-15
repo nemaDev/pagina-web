@@ -569,7 +569,7 @@ function AdminPanel({
           <div className="admin-users-intro">
             <div>
               <div className="section-label">ACCESOS</div>
-              <h3>Usuarios del panel</h3>
+              <h3>Panel de usuarios</h3>
               <p>Registra los correos autorizados para el futuro acceso por email.</p>
             </div>
             <span className="admin-users-count">{userEmails.length} registrados</span>

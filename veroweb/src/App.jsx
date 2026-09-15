@@ -352,6 +352,7 @@ function App() {
   });
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
+  const [authMode, setAuthMode] = useState("login");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -496,6 +497,14 @@ function App() {
     window.sessionStorage.setItem(ADMIN_LOGIN_KEY, isAuthenticated ? "true" : "false");
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (!supabaseClient) return;
+
+    supabaseClient.auth.getSession().then(({ data }) => {
+      if (data.session) setIsAuthenticated(true);
+    });
+  }, []);
+
   const closeMenu = () => setMenuOpen(false);
 
   const scrollToTop = () => {
@@ -516,10 +525,34 @@ function App() {
     }
   };
 
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
 
+    if (supabaseClient) {
+      const email = loginData.username.trim().toLowerCase();
+      const result = authMode === "register"
+        ? await supabaseClient.auth.signUp({ email, password: loginData.password })
+        : await supabaseClient.auth.signInWithPassword({ email, password: loginData.password });
+
+      if (result.error) {
+        setLoginError(result.error.message);
+        return;
+      }
+
+      if (authMode === "register" && !result.data.session) {
+        setLoginError("Cuenta creada. Revisa tu correo para confirmar el acceso.");
+        setAuthMode("login");
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setLoginError("");
+      goToAdminRoute();
+      return;
+    }
+
     if (
+      authMode === "login" &&
       loginData.username.trim() === ADMIN_USERNAME &&
       loginData.password === ADMIN_PASSWORD
     ) {
@@ -529,10 +562,13 @@ function App() {
       return;
     }
 
-    setLoginError("Usuario o contraseña incorrectos.");
+    setLoginError(authMode === "register"
+      ? "Configura Supabase para habilitar el registro de usuarios."
+      : "Usuario o contraseña incorrectos.");
   };
 
   const handleLogout = () => {
+    if (supabaseClient) supabaseClient.auth.signOut();
     setIsAuthenticated(false);
     setLoginError("");
     goToPublicSite();
@@ -567,17 +603,18 @@ function App() {
             <section className="admin-login-screen">
               <form className="admin-login-card" onSubmit={handleLogin}>
                 <div className="section-label">ACCESO RESTRINGIDO</div>
-                <h2>Panel de administración</h2>
+                <h2>{authMode === "login" ? "Panel de administración" : "Crear acceso"}</h2>
 
                 <label>
-                  <span>Usuario</span>
+                  <span>Correo electrónico</span>
                   <input
-                    type="text"
+                    type={supabaseClient ? "email" : "text"}
                     name="username"
                     value={loginData.username}
                     onChange={handleLoginChange}
-                    placeholder="admin"
-                    autoComplete="username"
+                    placeholder="tu@correo.com"
+                    autoComplete="email"
+                    required
                   />
                 </label>
 
@@ -590,13 +627,25 @@ function App() {
                     onChange={handleLoginChange}
                     placeholder="••••••••"
                     autoComplete="current-password"
+                    minLength={6}
+                    required
                   />
                 </label>
 
                 {loginError && <p className="admin-login-error">{loginError}</p>}
 
                 <button type="submit" className="button button-light">
-                  Entrar
+                  {authMode === "login" ? "Entrar" : "Registrarme"}
+                </button>
+                <button
+                  type="button"
+                  className="admin-auth-switch"
+                  onClick={() => {
+                    setAuthMode((prev) => (prev === "login" ? "register" : "login"));
+                    setLoginError("");
+                  }}
+                >
+                  {authMode === "login" ? "Crear una cuenta" : "Ya tengo una cuenta"}
                 </button>
               </form>
             </section>
