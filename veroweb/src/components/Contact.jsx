@@ -149,9 +149,9 @@ export default function Contact() {
             </a>
 
             <div className="contact-socials">
-              <a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>
+              <a href="https://instagram.com/bajo_milente" target="_blank" rel="noreferrer">Instagram</a>
               <a href="https://wa.me/56900000000" target="_blank" rel="noreferrer">WhatsApp</a>
-              <a href="https://behance.net" target="_blank" rel="noreferrer">Behance</a>
+              {/* <a href="https://behance.net" target="_blank" rel="noreferrer">Behance</a> */}
             </div>
           </div>
         </div>

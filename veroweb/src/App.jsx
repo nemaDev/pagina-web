@@ -220,15 +220,10 @@ function App() {
       if (!supabaseClient) return;
 
       const remotePortfolio = await fetchPortfolioFromSupabase();
-      if (!active) return;
+      if (!active || !remotePortfolio) return;
 
+      setPortfolio(remotePortfolio);
       hasLoadedRemotePortfolio.current = true;
-
-      if (remotePortfolio) {
-        setPortfolio(remotePortfolio);
-      } else {
-        setPortfolio((current) => (current && current.length ? current : defaultPortfolio));
-      }
     };
 
     loadRemotePortfolio();
@@ -370,31 +365,6 @@ function App() {
         ) : (
           <>
             <Hero />
-
-            <section className="intro section">
-              <div className="section-label">01 — PORTAFOLIO</div>
-
-              <div className="intro-grid">
-                <h2>
-                  Fotografía que
-                  <br />
-                  <em>cuenta historias.</em>
-                </h2>
-
-                <div>
-                  <p>
-                    Cada fotografía tiene algo que contar. Mi objetivo es capturar
-                    esos instantes que muchas veces pasan en segundos, pero que
-                    pueden permanecer para siempre.
-                  </p>
-
-                  <a href="#portfolio" className="text-link">
-                    Explorar fotografías →
-                  </a>
-                </div>
-              </div>
-            </section>
-
             <Portfolio items={portfolio} />
             <Services />
             <About />
