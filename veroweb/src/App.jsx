@@ -16,6 +16,7 @@ import { DEFAULT_CATEGORIES } from "./data/categories";
 const STORAGE_KEY = "bajo-mi-lente-portfolio";
 const CATEGORIES_STORAGE_KEY = "bajo-mi-lente-categories";
 const CATEGORY_VISIBILITY_STORAGE_KEY = "bajo-mi-lente-category-visibility";
+const USER_EMAILS_STORAGE_KEY = "bajo-mi-lente-user-emails";
 const ADMIN_LOGIN_KEY = "bajo-mi-lente-admin-auth";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "bajomilente";
@@ -184,6 +185,17 @@ const getInitialCategoryVisibility = () => {
   }
 };
 
+const getInitialUserEmails = () => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(USER_EMAILS_STORAGE_KEY) || "[]");
+    return Array.isArray(saved) ? saved.filter((email) => typeof email === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
 const mapSupabaseCategories = (rows = []) => {
   const visible = {};
   const names = rows
@@ -281,14 +293,56 @@ const saveCategoriesToSupabase = async (categories, categoryVisibility) => {
   }
 };
 
+const fetchUserEmailsFromSupabase = async () => {
+  if (!supabaseClient) return null;
+
+  const { data, error } = await supabaseClient
+    .from("admin_users")
+    .select("email")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.warn("No se pudieron cargar los usuarios desde Supabase:", error.message);
+    return null;
+  }
+
+  return (data || []).map((row) => row.email).filter(Boolean);
+};
+
+const saveUserEmailsToSupabase = async (emails) => {
+  if (!supabaseClient) return;
+
+  const { error: deleteError } = await supabaseClient
+    .from("admin_users")
+    .delete()
+    .not("email", "is", null);
+
+  if (deleteError) {
+    console.warn("No se pudieron actualizar los usuarios en Supabase:", deleteError.message);
+    return;
+  }
+
+  if (!emails.length) return;
+
+  const { error } = await supabaseClient
+    .from("admin_users")
+    .upsert(emails.map((email) => ({ email })), { onConflict: "email" });
+
+  if (error) {
+    console.warn("No se pudieron guardar los usuarios en Supabase:", error.message);
+  }
+};
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [portfolio, setPortfolio] = useState(getInitialPortfolio);
   const [categories, setCategories] = useState(getInitialCategories);
   const [categoryVisibility, setCategoryVisibility] = useState(getInitialCategoryVisibility);
+  const [userEmails, setUserEmails] = useState(getInitialUserEmails);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const hasLoadedRemotePortfolio = useRef(false);
   const hasLoadedRemoteCategories = useRef(false);
+  const hasLoadedRemoteUsers = useRef(false);
   const [isAdminRoute, setIsAdminRoute] = useState(() =>
     typeof window !== "undefined" ? isAdminPath(window.location.pathname) : false
   );
@@ -333,6 +387,11 @@ function App() {
   }, [categoryVisibility]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(USER_EMAILS_STORAGE_KEY, JSON.stringify(userEmails));
+  }, [userEmails]);
+
+  useEffect(() => {
     let active = true;
 
     const loadRemotePortfolio = async () => {
@@ -346,6 +405,24 @@ function App() {
     };
 
     loadRemotePortfolio();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRemoteUsers = async () => {
+      const remoteUsers = await fetchUserEmailsFromSupabase();
+      if (!active || !remoteUsers) return;
+
+      if (remoteUsers.length) setUserEmails(remoteUsers);
+      hasLoadedRemoteUsers.current = true;
+    };
+
+    loadRemoteUsers();
 
     return () => {
       active = false;
@@ -384,6 +461,12 @@ function App() {
 
     saveCategoriesToSupabase(categories, categoryVisibility);
   }, [categories, categoryVisibility]);
+
+  useEffect(() => {
+    if (!supabaseClient || !hasLoadedRemoteUsers.current) return;
+
+    saveUserEmailsToSupabase(userEmails);
+  }, [userEmails]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -476,6 +559,8 @@ function App() {
               setCategories={setCategories}
               categoryVisibility={categoryVisibility}
               setCategoryVisibility={setCategoryVisibility}
+              userEmails={userEmails}
+              setUserEmails={setUserEmails}
               onClose={handleLogout}
             />
           ) : (

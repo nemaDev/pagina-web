@@ -17,6 +17,8 @@ function AdminPanel({
   setCategories = () => {},
   categoryVisibility = {},
   setCategoryVisibility = () => {},
+  userEmails = [],
+  setUserEmails = () => {},
   onClose = () => {},
 }) {
   const [formData, setFormData] = useState(defaultForm);
@@ -32,6 +34,9 @@ function AdminPanel({
   const [categoryToRename, setCategoryToRename] = useState(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameNotice, setRenameNotice] = useState("");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [userNotice, setUserNotice] = useState("");
   const formRef = useRef(null);
   const titleInputRef = useRef(null);
 
@@ -232,6 +237,29 @@ function AdminPanel({
     }));
   };
 
+  const handleAddUser = (event) => {
+    event.preventDefault();
+    const email = newUserEmail.trim().toLowerCase();
+
+    if (!email || !email.includes("@")) {
+      setUserNotice("Escribe un correo válido.");
+      return;
+    }
+
+    if (userEmails.some((item) => item.toLowerCase() === email)) {
+      setUserNotice("Ese correo ya está registrado.");
+      return;
+    }
+
+    setUserEmails((prev) => [...prev, email]);
+    setNewUserEmail("");
+    setUserNotice("");
+  };
+
+  const handleRemoveUser = (email) => {
+    setUserEmails((prev) => prev.filter((item) => item !== email));
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
 
@@ -310,42 +338,70 @@ function AdminPanel({
 
   return (
     <section className="admin-panel section">
-      <div className="admin-header">
-        <div>
-          <div className="section-label">ADMIN</div>
-          <h2>Panel de contenido</h2>
-        </div>
+      <div className={`admin-dashboard ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+        <aside className="admin-sidebar">
+          <div className="admin-sidebar-brand">
+            <span className="admin-brand-mark">BM</span>
+            <div>
+              <strong>Bajo mi lente</strong>
+              <span>Studio admin</span>
+            </div>
+            <button
+              type="button"
+              className="admin-collapse-button"
+              onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+              aria-label={isSidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+              title={isSidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+            >
+              {isSidebarCollapsed ? "→" : "←"}
+            </button>
+          </div>
 
-        <button type="button" className="button button-light" onClick={onClose}>
-          Volver al sitio
-        </button>
-      </div>
+          <div className="admin-sidebar-heading">Workspace</div>
+          <nav className="admin-nav" aria-label="Secciones de administración">
+            {[
+              ["overview", "Resumen"],
+              ["upload", "Subir imágenes"],
+              ["editor", "Editor"],
+              ["library", "Biblioteca"],
+              ["categories", "Categorías"],
+              ["users", "Usuarios"],
+            ].map(([section, label]) => (
+              <button
+                type="button"
+                key={section}
+                className={activeSection === section ? "active" : ""}
+                onClick={() => {
+                  if (section === "upload") {
+                    openUploadSection();
+                    return;
+                  }
 
-      <nav className="admin-nav" aria-label="Secciones de administración">
-        {[
-          ["overview", "Resumen"],
-          ["upload", "Subir imágenes"],
-          ["editor", "Editor"],
-          ["library", "Biblioteca"],
-          ["categories", "Categorías"],
-        ].map(([section, label]) => (
-          <button
-            type="button"
-            key={section}
-            className={activeSection === section ? "active" : ""}
-            onClick={() => {
-              if (section === "upload") {
-                openUploadSection();
-                return;
-              }
+                  setActiveSection(section);
+                }}
+              >
+                <span className={`admin-nav-icon admin-nav-icon-${section}`} aria-hidden="true" />
+                <span className="admin-nav-label">{label}</span>
+              </button>
+            ))}
+          </nav>
 
-              setActiveSection(section);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+          <div className="admin-sidebar-footer">
+            <span className="admin-sidebar-status"><i /> Sistema activo</span>
+            <button type="button" className="admin-exit" onClick={onClose}>
+              Volver al sitio <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </aside>
+
+        <div className="admin-main">
+          <div className="admin-header">
+            <div>
+              <div className="section-label">ADMIN / {activeSection.toUpperCase()}</div>
+              <h2>{activeSection === "overview" ? "Panel de contenido" : activeSection === "upload" ? "Subir imágenes" : activeSection === "editor" ? "Editor" : activeSection === "library" ? "Biblioteca" : activeSection === "users" ? "Usuarios" : "Categorías"}</h2>
+            </div>
+            <span className="admin-main-date">Panel de administración</span>
+          </div>
 
       {activeSection === "overview" && (
         <div className="admin-overview">
@@ -508,6 +564,40 @@ function AdminPanel({
           </div>
       )}
 
+      {activeSection === "users" && (
+        <div className="admin-users-page">
+          <div className="admin-users-intro">
+            <div>
+              <div className="section-label">ACCESOS</div>
+              <h3>Usuarios del panel</h3>
+              <p>Registra los correos autorizados para el futuro acceso por email.</p>
+            </div>
+            <span className="admin-users-count">{userEmails.length} registrados</span>
+          </div>
+          <form className="admin-user-form" onSubmit={handleAddUser}>
+            <input
+              type="email"
+              value={newUserEmail}
+              onChange={(event) => setNewUserEmail(event.target.value)}
+              placeholder="correo@ejemplo.com"
+              aria-label="Correo del usuario"
+            />
+            <button type="submit" className="button button-light">Añadir usuario</button>
+          </form>
+          {userNotice && <p className="admin-category-notice">{userNotice}</p>}
+          <div className="admin-user-list">
+            {userEmails.length ? userEmails.map((email) => (
+              <div className="admin-user-row" key={email}>
+                <span className="admin-user-avatar">{email.charAt(0).toUpperCase()}</span>
+                <strong>{email}</strong>
+                <span className="admin-user-role">Editor</span>
+                <button type="button" className="danger" onClick={() => handleRemoveUser(email)}>Eliminar</button>
+              </div>
+            )) : <p className="admin-empty">Todavía no hay correos registrados.</p>}
+          </div>
+        </div>
+      )}
+
       {activeSection === "library" && (
         <div className="admin-list">
           <div className="admin-list-header">
@@ -575,6 +665,9 @@ function AdminPanel({
           )}
         </div>
       )}
+
+        </div>
+      </div>
 
       {categoryToRename && (
         <div className="admin-dialog-backdrop" role="presentation" onMouseDown={closeRenameDialog}>
