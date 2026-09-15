@@ -351,7 +351,6 @@ function App() {
     return window.sessionStorage.getItem(ADMIN_LOGIN_KEY) === "true";
   });
   const [loginData, setLoginData] = useState({ username: "", password: "" });
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [authMode, setAuthMode] = useState("login");
@@ -570,28 +569,6 @@ function App() {
       return;
     }
 
-    if (authMode === "register") {
-      if (!email || !email.includes("@")) {
-        setLoginError("Escribe un correo electrónico válido.");
-        return;
-      }
-
-      if (loginData.password.length < 6) {
-        setLoginError("La contraseña debe tener al menos 6 caracteres.");
-        return;
-      }
-
-      if (loginData.password !== confirmPassword) {
-        setLoginError("Las contraseñas no coinciden.");
-        return;
-      }
-
-      if (!userEmails.some((registeredEmail) => registeredEmail.toLowerCase() === email)) {
-        setLoginError("Este correo no está autorizado. Pide al administrador que lo agregue en Usuarios antes de registrarte.");
-        return;
-      }
-    }
-
     if (supabaseClient) {
       if (
         authMode === "login" &&
@@ -601,9 +578,10 @@ function App() {
         return;
       }
 
-      const result = authMode === "register"
-        ? await supabaseClient.auth.signUp({ email, password: loginData.password })
-        : await supabaseClient.auth.signInWithPassword({ email, password: loginData.password });
+      const result = await supabaseClient.auth.signInWithPassword({
+        email,
+        password: loginData.password,
+      });
 
       if (result.error) {
         const message = result.error.message.toLowerCase();
@@ -621,16 +599,7 @@ function App() {
         setLoginError(errorMessage);
         if (isEmailRateLimited) {
           setAuthMode("login");
-          setConfirmPassword("");
         }
-        return;
-      }
-
-      if (authMode === "register" && !result.data.session) {
-        setAuthNotice(`Cuenta creada para ${email}. Revisa tu correo electrónico y confirma el enlace para activar tu acceso. Después vuelve aquí e inicia sesión.`);
-        setLoginError("");
-        setAuthMode("login");
-        setConfirmPassword("");
         return;
       }
 
@@ -641,9 +610,7 @@ function App() {
       return;
     }
 
-    setLoginError(authMode === "register"
-      ? "Configura Supabase para habilitar el registro de usuarios."
-      : "Usuario o contraseña incorrectos.");
+    setLoginError("Usuario o contraseña incorrectos.");
   };
 
   const handleLogout = () => {
@@ -682,11 +649,7 @@ function App() {
             <section className="admin-login-screen">
               <form className="admin-login-card" onSubmit={handleLogin}>
                 <div className="section-label">ACCESO RESTRINGIDO</div>
-                <h2>
-                  {authMode === "login"
-                    ? "Panel de administración"
-                    : authMode === "register" ? "Crear acceso" : "Recuperar acceso"}
-                </h2>
+                <h2>{authMode === "login" ? "Panel de administración" : "Recuperar acceso"}</h2>
 
                 <label>
                   <span>{authMode === "login" ? "Correo o usuario" : "Correo electrónico"}</span>
@@ -710,22 +673,7 @@ function App() {
                       value={loginData.password}
                       onChange={handleLoginChange}
                       placeholder="••••••••"
-                      autoComplete={authMode === "register" ? "new-password" : "current-password"}
-                      minLength={6}
-                      required
-                    />
-                  </label>
-                )}
-
-                {authMode === "register" && (
-                  <label>
-                    <span>Repetir contraseña</span>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                      placeholder="Repite tu contraseña"
-                      autoComplete="new-password"
+                      autoComplete="current-password"
                       minLength={6}
                       required
                     />
@@ -736,7 +684,7 @@ function App() {
                 {loginError && <p className="admin-login-error">{loginError}</p>}
 
                 <button type="submit" className="button button-light">
-                  {authMode === "login" ? "Entrar" : authMode === "register" ? "Registrarme" : "Enviar enlace"}
+                  {authMode === "login" ? "Entrar" : "Enviar enlace"}
                 </button>
                 {authMode === "login" && (
                   <button
@@ -746,24 +694,24 @@ function App() {
                       setAuthMode("forgot");
                       setLoginError("");
                       setAuthNotice("");
-                      setConfirmPassword("");
                     }}
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="admin-auth-switch"
-                  onClick={() => {
-                    setAuthMode((prev) => (prev === "login" || prev === "forgot" ? "register" : "login"));
-                    setLoginError("");
-                    setAuthNotice("");
-                    setConfirmPassword("");
-                  }}
-                >
-                  {authMode === "login" || authMode === "forgot" ? "Crear una cuenta" : "Ya tengo una cuenta"}
-                </button>
+                {authMode === "forgot" && (
+                  <button
+                    type="button"
+                    className="admin-auth-switch"
+                    onClick={() => {
+                      setAuthMode("login");
+                      setLoginError("");
+                      setAuthNotice("");
+                    }}
+                  >
+                    Volver a iniciar sesión
+                  </button>
+                )}
               </form>
             </section>
           )
