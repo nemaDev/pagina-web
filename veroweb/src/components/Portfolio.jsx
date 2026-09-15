@@ -1,26 +1,34 @@
 import { useMemo, useState } from "react";
 
-function Portfolio({ items = [], categories = [] }) {
+function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeSubtype, setActiveSubtype] = useState("Todos");
 
   const categoryCards = useMemo(
     () =>
-      categories.map((category) => {
-        const categoryItems = items.filter((item) => item.category === category);
-        return {
-          id: category,
-          name: category,
-          cover: categoryItems[0]?.image || "",
-          count: categoryItems.length,
-        };
-      }),
-    [items]
+      categories
+        .filter((category) => categoryVisibility[category] !== false)
+        .map((category) => {
+          const categoryItems = items.filter(
+            (item) => item.category === category && item.visible !== false
+          );
+          return {
+            id: category,
+            name: category,
+            cover: categoryItems[0]?.image || "",
+            count: categoryItems.length,
+          };
+        }),
+    [categories, categoryVisibility, items]
   );
 
   const currentCategoryItems = useMemo(
-    () => (selectedCategory ? items.filter((item) => item.category === selectedCategory) : []),
+    () => (selectedCategory
+      ? items.filter(
+          (item) => item.category === selectedCategory && item.visible !== false
+        )
+      : []),
     [items, selectedCategory]
   );
 

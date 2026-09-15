@@ -15,6 +15,7 @@ import { DEFAULT_CATEGORIES } from "./data/categories";
 
 const STORAGE_KEY = "bajo-mi-lente-portfolio";
 const CATEGORIES_STORAGE_KEY = "bajo-mi-lente-categories";
+const CATEGORY_VISIBILITY_STORAGE_KEY = "bajo-mi-lente-category-visibility";
 const ADMIN_LOGIN_KEY = "bajo-mi-lente-admin-auth";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "bajomilente";
@@ -119,6 +120,7 @@ const normalizePortfolio = (items) =>
   items.map((item, index) => ({
     ...item,
     id: item.id || `${item.category}-${item.title || "item"}-${index}`,
+    visible: item.visible !== false,
   }));
 
 const getInitialPortfolio = () => {
@@ -168,6 +170,17 @@ const getInitialCategories = () => {
       : [...new Set([...DEFAULT_CATEGORIES, ...portfolioCategories])];
   } catch {
     return [...new Set([...DEFAULT_CATEGORIES, ...portfolioCategories])];
+  }
+};
+
+const getInitialCategoryVisibility = () => {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(CATEGORY_VISIBILITY_STORAGE_KEY) || "{}");
+    return saved && typeof saved === "object" ? saved : {};
+  } catch {
+    return {};
   }
 };
 
@@ -225,6 +238,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [portfolio, setPortfolio] = useState(getInitialPortfolio);
   const [categories, setCategories] = useState(getInitialCategories);
+  const [categoryVisibility, setCategoryVisibility] = useState(getInitialCategoryVisibility);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const hasLoadedRemotePortfolio = useRef(false);
   const [isAdminRoute, setIsAdminRoute] = useState(() =>
@@ -256,6 +270,19 @@ function App() {
       console.warn("No se pudieron guardar las categorías en localStorage:", error);
     }
   }, [categories]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      window.localStorage.setItem(
+        CATEGORY_VISIBILITY_STORAGE_KEY,
+        JSON.stringify(categoryVisibility)
+      );
+    } catch (error) {
+      console.warn("No se pudo guardar la visibilidad de las categorías:", error);
+    }
+  }, [categoryVisibility]);
 
   useEffect(() => {
     let active = true;
@@ -372,6 +399,8 @@ function App() {
               setItems={setPortfolio}
               categories={categories}
               setCategories={setCategories}
+              categoryVisibility={categoryVisibility}
+              setCategoryVisibility={setCategoryVisibility}
               onClose={handleLogout}
             />
           ) : (
@@ -415,7 +444,11 @@ function App() {
         ) : (
           <>
             <Hero />
-            <Portfolio items={portfolio} categories={categories} />
+            <Portfolio
+              items={portfolio}
+              categories={categories}
+              categoryVisibility={categoryVisibility}
+            />
             <Services />
             <About />
             <Contact />

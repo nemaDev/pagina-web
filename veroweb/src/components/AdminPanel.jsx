@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CATEGORIES } from "../data/categories";
 
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -15,6 +15,8 @@ function AdminPanel({
   setItems = () => {},
   categories = DEFAULT_CATEGORIES,
   setCategories = () => {},
+  categoryVisibility = {},
+  setCategoryVisibility = () => {},
   onClose = () => {},
 }) {
   const [formData, setFormData] = useState(defaultForm);
@@ -26,6 +28,12 @@ function AdminPanel({
   const [search, setSearch] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [categoryNotice, setCategoryNotice] = useState("");
+  const [activeSection, setActiveSection] = useState("overview");
+  const [categoryToRename, setCategoryToRename] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameNotice, setRenameNotice] = useState("");
+  const formRef = useRef(null);
+  const titleInputRef = useRef(null);
 
   const availableCategories = useMemo(
     () => [...new Set([...categories, ...items.map((item) => item.category).filter(Boolean)])],
@@ -105,6 +113,11 @@ function AdminPanel({
     setPendingDeleteId(null);
   };
 
+  const openUploadSection = () => {
+    resetForm();
+    setActiveSection("upload");
+  };
+
   const handleCreateCategory = (event) => {
     event.preventDefault();
     const name = newCategory.trim();
@@ -120,25 +133,67 @@ function AdminPanel({
     }
 
     setCategories((prev) => [...prev, name]);
+    setCategoryVisibility((prev) => ({ ...prev, [name]: true }));
     setFormData((prev) => ({ ...prev, category: name }));
     setNewCategory("");
     setCategoryNotice("");
   };
 
   const handleRenameCategory = (category) => {
-    const name = window.prompt("Nuevo nombre de la categoría", category)?.trim();
-    if (!name || name === category) return;
+    setCategoryToRename(category);
+    setRenameValue(category);
+    setRenameNotice("");
+    setCategoryNotice("");
+  };
+
+  const closeRenameDialog = () => {
+    setCategoryToRename(null);
+    setRenameValue("");
+    setRenameNotice("");
+  };
+
+  useEffect(() => {
+    if (!categoryToRename) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") closeRenameDialog();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [categoryToRename]);
+
+  const handleRenameSubmit = (event) => {
+    event.preventDefault();
+    const category = categoryToRename;
+    const name = renameValue.trim();
+
+    if (!category || !name) {
+      setRenameNotice("Escribe un nombre para la categoría.");
+      return;
+    }
+
+    if (name === category) {
+      closeRenameDialog();
+      return;
+    }
 
     if (availableCategories.some((item) => item !== category && item.toLowerCase() === name.toLowerCase())) {
-      setCategoryNotice("Esa categoría ya existe.");
+      setRenameNotice("Esa categoría ya existe.");
       return;
     }
 
     setCategories((prev) => prev.map((item) => (item === category ? name : item)));
+    setCategoryVisibility((prev) => {
+      const next = { ...prev, [name]: prev[category] !== false };
+      delete next[category];
+      return next;
+    });
     setItems((prev) => prev.map((item) => (item.category === category ? { ...item, category: name } : item)));
     if (filter === category) setFilter(name);
     if (formData.category === category) setFormData((prev) => ({ ...prev, category: name }));
     setCategoryNotice("");
+    closeRenameDialog();
   };
 
   const handleDeleteCategory = (category) => {
@@ -154,9 +209,27 @@ function AdminPanel({
     }
 
     setCategories((prev) => prev.filter((item) => item !== category));
+    setCategoryVisibility((prev) => {
+      const next = { ...prev };
+      delete next[category];
+      return next;
+    });
     if (filter === category) setFilter("Todos");
     if (formData.category === category) resetForm();
     setCategoryNotice("");
+  };
+
+  const toggleItemVisibility = (id) => {
+    setItems((prev) => prev.map((item) => (
+      item.id === id ? { ...item, visible: item.visible === false } : item
+    )));
+  };
+
+  const toggleCategoryVisibility = (category) => {
+    setCategoryVisibility((prev) => ({
+      ...prev,
+      [category]: prev[category] === false,
+    }));
   };
 
   const handleSubmit = (event) => {
@@ -190,12 +263,18 @@ function AdminPanel({
   };
 
   const handleEdit = (item) => {
+    setActiveSection("editor");
     setEditingId(item.id);
     setPendingDeleteId(null);
     setFormData({
       category: item.category,
       title: item.title,
       image: item.image,
+    });
+
+    window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      titleInputRef.current?.focus({ preventScroll: true });
     });
   };
 
@@ -242,69 +321,147 @@ function AdminPanel({
         </button>
       </div>
 
-      <div className="admin-shell">
-        <form className="admin-form" onSubmit={handleSubmit}>
+      <nav className="admin-nav" aria-label="Secciones de administración">
+        {[
+          ["overview", "Resumen"],
+          ["upload", "Subir imágenes"],
+          ["editor", "Editor"],
+          ["library", "Biblioteca"],
+          ["categories", "Categorías"],
+        ].map(([section, label]) => (
+          <button
+            type="button"
+            key={section}
+            className={activeSection === section ? "active" : ""}
+            onClick={() => {
+              if (section === "upload") {
+                openUploadSection();
+                return;
+              }
+
+              setActiveSection(section);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {activeSection === "overview" && (
+        <div className="admin-overview">
+          <div className="admin-stats" aria-label="Resumen del portafolio">
+            <div><strong>{items.length}</strong><span>Fotos</span></div>
+            <div><strong>{categories.length}</strong><span>Categorías</span></div>
+            <div><strong>{items.filter((item) => item.image).length}</strong><span>Con imagen</span></div>
+          </div>
+          <div className="admin-overview-copy">
+            <div>
+              <div className="section-label">CENTRO DE CONTENIDO</div>
+              <h3>Gestiona tu portafolio por espacios.</h3>
+                <p>Sube fotografías desde su apartado, edita las existentes desde el editor y organiza tu colección en la biblioteca.</p>
+              </div>
+              <button type="button" className="button button-light" onClick={openUploadSection}>
+              Añadir fotografía
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeSection === "editor" && !editingId && (
+        <div className="admin-editor-empty">
+          <div className="section-label">EDITOR</div>
+          <h3>Selecciona una fotografía para editarla.</h3>
+          <p>Abre la biblioteca y pulsa “Editar” en la imagen que quieras modificar.</p>
+          <button type="button" className="button button-light" onClick={() => setActiveSection("library")}>
+            Ir a la biblioteca
+          </button>
+        </div>
+      )}
+
+      {(activeSection === "upload" || (activeSection === "editor" && editingId)) && <div className="admin-shell admin-shell-editor">
+        <form ref={formRef} className="admin-form" onSubmit={handleSubmit}>
           <div className="admin-form-top">
-            <div className="section-label">{editingId ? "EDITAR ITEM" : "NUEVO ITEM"}</div>
+            <div>
+              <div className="section-label">{activeSection === "upload" ? "SUBIR IMAGEN" : "EDITAR ITEM"}</div>
+              <h3>{activeSection === "upload" ? "Añade una nueva fotografía" : "Ajusta tu fotografía"}</h3>
+            </div>
+            <span className="admin-form-status">{activeSection === "upload" ? "Nuevo" : "Editando"}</span>
           </div>
 
           {notice && <p className="admin-notice">{notice}</p>}
 
-          <div className="admin-grid">
-            <label>
-              <span>Categoría</span>
-              <select name="category" value={formData.category} onChange={updateForm}>
-                {availableCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="admin-form-layout">
+            <div className="admin-form-fields">
+              <div className="admin-grid">
+                <label>
+                  <span>Categoría</span>
+                  <select name="category" value={formData.category} onChange={updateForm}>
+                    {availableCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <label>
-              <span>Título</span>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={updateForm}
-                placeholder="Ej: Partido nocturno"
-                required
-              />
-            </label>
-          </div>
+                <label>
+                  <span>Título</span>
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={updateForm}
+                    placeholder="Ej: Partido nocturno"
+                    required
+                  />
+                </label>
+              </div>
 
-          <label>
-            <span>URL de la imagen</span>
-            <input
-              type="url"
-              name="image"
-              value={formData.image}
-              onChange={updateForm}
-              placeholder="https://..."
-            />
-          </label>
+              <div className="admin-source-grid">
+                <label>
+                  <span>URL de la imagen</span>
+                  <input
+                    type="url"
+                    name="image"
+                    value={formData.image}
+                    onChange={updateForm}
+                    placeholder="https://..."
+                  />
+                </label>
 
-          <label className="admin-upload">
-            <span>O subir archivo</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={isUploading}
-            />
-          </label>
-
-          {formData.image && (
-            <div className="admin-preview">
-              <img src={formData.image} alt="Preview" />
+                <label className="admin-upload">
+                  <strong>Sube desde tu dispositivo</strong>
+                  <small>JPG, PNG o WebP · Se optimiza en la nube</small>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={isUploading}
+                  />
+                  <span>{isUploading ? "Subiendo imagen..." : "Elegir archivo"}</span>
+                </label>
+              </div>
             </div>
-          )}
+
+            <div className={`admin-media-column ${formData.image ? "has-image" : ""}`}>
+              {formData.image ? (
+                <div className="admin-preview">
+                  <img src={formData.image} alt="Vista previa" />
+                  <span>Vista previa</span>
+                </div>
+              ) : (
+                <div className="admin-preview-empty">
+                  <span>Vista previa</span>
+                  <strong>La imagen aparecerá aquí</strong>
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="admin-actions">
             <button type="submit" className="button button-light" disabled={isUploading}>
-              {isUploading ? "Subiendo..." : editingId ? "Guardar cambios" : "Agregar imagen"}
+              {isUploading ? "Subiendo..." : activeSection === "upload" ? "Agregar imagen" : "Guardar cambios"}
             </button>
             {editingId && (
               <button type="button" className="button button-outline-dark" onClick={resetForm}>
@@ -313,14 +470,9 @@ function AdminPanel({
             )}
           </div>
         </form>
+      </div>}
 
-        <div className="admin-list">
-          <div className="admin-stats" aria-label="Resumen del portafolio">
-            <div><strong>{items.length}</strong><span>Fotos</span></div>
-            <div><strong>{categories.length}</strong><span>Categorías</span></div>
-            <div><strong>{items.filter((item) => item.image).length}</strong><span>Con imagen</span></div>
-          </div>
-
+      {activeSection === "categories" && (
           <div className="admin-categories">
             <div className="admin-list-header">
               <div>
@@ -344,6 +496,9 @@ function AdminPanel({
                 <div className="admin-category-row" key={name}>
                   <span><strong>{name}</strong><small>{count} {count === 1 ? "foto" : "fotos"}</small></span>
                   <div>
+                    <button type="button" onClick={() => toggleCategoryVisibility(name)}>
+                      {categoryVisibility[name] === false ? "Mostrar" : "Ocultar"}
+                    </button>
                     <button type="button" onClick={() => handleRenameCategory(name)}>Renombrar</button>
                     <button type="button" className="danger" onClick={() => handleDeleteCategory(name)}>Eliminar</button>
                   </div>
@@ -351,7 +506,10 @@ function AdminPanel({
               ))}
             </div>
           </div>
+      )}
 
+      {activeSection === "library" && (
+        <div className="admin-list">
           <div className="admin-list-header">
             <div>
               <div className="section-label">BIBLIOTECA</div>
@@ -384,7 +542,7 @@ function AdminPanel({
           ) : (
             <div className="admin-items">
               {visibleItems.map((item) => (
-                <div key={item.id} className="admin-item">
+                <div key={item.id} className={`admin-item ${item.visible === false ? "is-hidden" : ""}`}>
                   <img src={item.image} alt={item.title} />
 
                   <div className="admin-item-copy">
@@ -393,6 +551,9 @@ function AdminPanel({
                   </div>
 
                   <div className="admin-item-actions">
+                    <button type="button" onClick={() => toggleItemVisibility(item.id)}>
+                      {item.visible === false ? "Mostrar" : "Ocultar"}
+                    </button>
                     <button type="button" onClick={() => handleEdit(item)}>
                       Editar
                     </button>
@@ -413,7 +574,52 @@ function AdminPanel({
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {categoryToRename && (
+        <div className="admin-dialog-backdrop" role="presentation" onMouseDown={closeRenameDialog}>
+          <div
+            className="admin-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-category-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="admin-dialog-close"
+              onClick={closeRenameDialog}
+              aria-label="Cerrar diálogo"
+            >
+              ×
+            </button>
+            <div className="section-label">CATEGORÍA</div>
+            <h3 id="rename-category-title">Renombrar categoría</h3>
+            <p>El nuevo nombre se aplicará también a las fotografías de esta colección.</p>
+            <form onSubmit={handleRenameSubmit}>
+              <label>
+                <span>Nuevo nombre</span>
+                <input
+                  type="text"
+                  value={renameValue}
+                  onChange={(event) => setRenameValue(event.target.value)}
+                  autoFocus
+                  maxLength={50}
+                />
+              </label>
+              {renameNotice && <p className="admin-dialog-notice">{renameNotice}</p>}
+              <div className="admin-dialog-actions">
+                <button type="button" className="button button-outline-dark" onClick={closeRenameDialog}>
+                  Cancelar
+                </button>
+                <button type="submit" className="button button-light">
+                  Guardar nombre
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
