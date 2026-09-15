@@ -677,14 +677,14 @@ function App() {
                 </h2>
 
                 <label>
-                  <span>Correo electrónico</span>
+                  <span>{authMode === "login" ? "Correo o usuario" : "Correo electrónico"}</span>
                   <input
-                    type={supabaseClient ? "email" : "text"}
+                    type="text"
                     name="username"
                     value={loginData.username}
                     onChange={handleLoginChange}
-                    placeholder="tu@correo.com"
-                    autoComplete="email"
+                    placeholder={authMode === "login" ? "admin o tu@correo.com" : "tu@correo.com"}
+                    autoComplete={authMode === "login" ? "username" : "email"}
                     required
                   />
                 </label>
