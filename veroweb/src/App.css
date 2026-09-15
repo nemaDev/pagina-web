@@ -1188,6 +1188,14 @@ img {
   .admin-items {
     grid-template-columns: 1fr;
   }
+
+  .contact-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1198,6 +1206,27 @@ img {
   .admin-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .contact {
+    padding: 90px 0;
+  }
+
+  .contact-form {
+    padding: 20px 16px;
+  }
+
+  .contact-sidebar {
+    padding: 20px 16px;
+  }
+
+  .contact-row {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-form input,
+  .contact-form textarea {
+    min-height: 48px;
   }
 }
 
