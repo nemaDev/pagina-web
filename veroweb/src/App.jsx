@@ -1,5 +1,6 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 
 import Navbar from "./components/Navbar";
@@ -15,6 +16,10 @@ const STORAGE_KEY = "bajo-mi-lente-portfolio";
 const ADMIN_LOGIN_KEY = "bajo-mi-lente-admin-auth";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "bajomilente";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseClient = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 const isAdminPath = (path = "") => {
   const currentPath = (path || (typeof window !== "undefined" ? window.location.pathname : "") || "").toLowerCase();
@@ -133,10 +138,61 @@ const getInitialPortfolio = () => {
   }
 };
 
+const mapSupabaseRows = (rows = []) =>
+  normalizePortfolio(
+    rows.map((row) => ({
+      id: row.id,
+      category: row.category,
+      title: row.title,
+      image: row.image,
+    }))
+  );
+
+const fetchPortfolioFromSupabase = async () => {
+  if (!supabaseClient) {
+    return null;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("portfolio_items")
+    .select("*")
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    console.warn("No se pudo cargar el portafolio desde Supabase:", error.message);
+    return null;
+  }
+
+  return data && data.length ? mapSupabaseRows(data) : null;
+};
+
+const savePortfolioToSupabase = async (items) => {
+  if (!supabaseClient) {
+    return;
+  }
+
+  const rows = items.map((item, index) => ({
+    id: item.id,
+    category: item.category,
+    title: item.title,
+    image: item.image,
+    order_index: index,
+  }));
+
+  const { error } = await supabaseClient.from("portfolio_items").upsert(rows, {
+    onConflict: "id",
+  });
+
+  if (error) {
+    console.warn("No se pudo guardar el portafolio en Supabase:", error.message);
+  }
+};
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [portfolio, setPortfolio] = useState(getInitialPortfolio);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const hasLoadedRemotePortfolio = useRef(false);
   const [isAdminRoute, setIsAdminRoute] = useState(() =>
     typeof window !== "undefined" ? isAdminPath(window.location.pathname) : false
   );
@@ -155,6 +211,32 @@ function App() {
     } catch (error) {
       console.warn("No se pudo guardar el portafolio en localStorage:", error);
     }
+  }, [portfolio]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRemotePortfolio = async () => {
+      if (!supabaseClient) return;
+
+      const remotePortfolio = await fetchPortfolioFromSupabase();
+      if (!active || !remotePortfolio) return;
+
+      setPortfolio(remotePortfolio);
+      hasLoadedRemotePortfolio.current = true;
+    };
+
+    loadRemotePortfolio();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabaseClient || !hasLoadedRemotePortfolio.current) return;
+
+    savePortfolioToSupabase(portfolio);
   }, [portfolio]);
 
   useEffect(() => {
