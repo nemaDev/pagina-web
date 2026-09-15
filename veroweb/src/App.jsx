@@ -532,6 +532,44 @@ function App() {
 
     const email = loginData.username.trim().toLowerCase();
 
+    if (
+      authMode === "login" &&
+      loginData.username.trim() === ADMIN_USERNAME &&
+      loginData.password === ADMIN_PASSWORD
+    ) {
+      setIsAuthenticated(true);
+      setLoginError("");
+      setAuthNotice("");
+      goToAdminRoute();
+      return;
+    }
+
+    if (authMode === "forgot") {
+      if (!email || !email.includes("@")) {
+        setLoginError("Escribe el correo con el que creaste tu cuenta.");
+        return;
+      }
+
+      if (!supabaseClient) {
+        setLoginError("La recuperación por correo requiere configurar Supabase.");
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin`,
+      });
+
+      if (error) {
+        setLoginError("No se pudo enviar el correo de recuperación. Comprueba el email e inténtalo de nuevo.");
+        return;
+      }
+
+      setLoginError("");
+      setAuthNotice(`Si existe una cuenta para ${email}, recibirás un enlace para crear una nueva contraseña.`);
+      setAuthMode("login");
+      return;
+    }
+
     if (authMode === "register") {
       if (!email || !email.includes("@")) {
         setLoginError("Escribe un correo electrónico válido.");
@@ -591,18 +629,6 @@ function App() {
       return;
     }
 
-    if (
-      authMode === "login" &&
-      loginData.username.trim() === ADMIN_USERNAME &&
-      loginData.password === ADMIN_PASSWORD
-    ) {
-      setIsAuthenticated(true);
-      setLoginError("");
-      setAuthNotice("");
-      goToAdminRoute();
-      return;
-    }
-
     setLoginError(authMode === "register"
       ? "Configura Supabase para habilitar el registro de usuarios."
       : "Usuario o contraseña incorrectos.");
@@ -644,7 +670,11 @@ function App() {
             <section className="admin-login-screen">
               <form className="admin-login-card" onSubmit={handleLogin}>
                 <div className="section-label">ACCESO RESTRINGIDO</div>
-                <h2>{authMode === "login" ? "Panel de administración" : "Crear acceso"}</h2>
+                <h2>
+                  {authMode === "login"
+                    ? "Panel de administración"
+                    : authMode === "register" ? "Crear acceso" : "Recuperar acceso"}
+                </h2>
 
                 <label>
                   <span>Correo electrónico</span>
@@ -659,19 +689,21 @@ function App() {
                   />
                 </label>
 
-                <label>
-                  <span>Contraseña</span>
-                  <input
-                    type="password"
-                    name="password"
-                    value={loginData.password}
-                    onChange={handleLoginChange}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    minLength={6}
-                    required
-                  />
-                </label>
+                {authMode !== "forgot" && (
+                  <label>
+                    <span>Contraseña</span>
+                    <input
+                      type="password"
+                      name="password"
+                      value={loginData.password}
+                      onChange={handleLoginChange}
+                      placeholder="••••••••"
+                      autoComplete={authMode === "register" ? "new-password" : "current-password"}
+                      minLength={6}
+                      required
+                    />
+                  </label>
+                )}
 
                 {authMode === "register" && (
                   <label>
@@ -692,19 +724,33 @@ function App() {
                 {loginError && <p className="admin-login-error">{loginError}</p>}
 
                 <button type="submit" className="button button-light">
-                  {authMode === "login" ? "Entrar" : "Registrarme"}
+                  {authMode === "login" ? "Entrar" : authMode === "register" ? "Registrarme" : "Enviar enlace"}
                 </button>
+                {authMode === "login" && (
+                  <button
+                    type="button"
+                    className="admin-auth-switch"
+                    onClick={() => {
+                      setAuthMode("forgot");
+                      setLoginError("");
+                      setAuthNotice("");
+                      setConfirmPassword("");
+                    }}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                )}
                 <button
                   type="button"
                   className="admin-auth-switch"
                   onClick={() => {
-                    setAuthMode((prev) => (prev === "login" ? "register" : "login"));
+                    setAuthMode((prev) => (prev === "login" || prev === "forgot" ? "register" : "login"));
                     setLoginError("");
                     setAuthNotice("");
                     setConfirmPassword("");
                   }}
                 >
-                  {authMode === "login" ? "Crear una cuenta" : "Ya tengo una cuenta"}
+                  {authMode === "login" || authMode === "forgot" ? "Crear una cuenta" : "Ya tengo una cuenta"}
                 </button>
               </form>
             </section>
