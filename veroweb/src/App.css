@@ -951,6 +951,15 @@ img {
   color: #7a1f1f;
 }
 
+.admin-login-notice {
+  padding: 12px;
+  border: 1px solid #b8dec9;
+  background: #edf9f2;
+  color: #236342;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .admin-auth-switch {
   border: 0;
   background: transparent;

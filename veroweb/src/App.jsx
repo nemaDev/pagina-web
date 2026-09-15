@@ -353,6 +353,7 @@ function App() {
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
   const [authMode, setAuthMode] = useState("login");
 
   useEffect(() => {
@@ -555,21 +556,29 @@ function App() {
 
       if (result.error) {
         const message = result.error.message.toLowerCase();
-        setLoginError(
-          message.includes("already registered") || message.includes("already been registered")
+        const isEmailRateLimited = message.includes("email rate limit") || message.includes("rate limit exceeded");
+        const errorMessage = isEmailRateLimited
+          ? "Supabase ha limitado temporalmente los correos de registro. Espera unos minutos antes de intentarlo de nuevo o configura un proveedor SMTP en Supabase."
+          : message.includes("already registered") || message.includes("already been registered")
             ? "Este correo ya tiene una cuenta. Intenta iniciar sesión."
             : message.includes("invalid email")
               ? "El correo electrónico no es válido."
               : message.includes("password")
                 ? "La contraseña no cumple los requisitos mínimos."
-                : `No se pudo completar el acceso: ${result.error.message}`
-        );
+                : `No se pudo completar el acceso: ${result.error.message}`;
+
+        setLoginError(errorMessage);
+        if (isEmailRateLimited) {
+          setAuthMode("login");
+          setConfirmPassword("");
+        }
         return;
       }
 
       if (authMode === "register" && !result.data.session) {
         setUserEmails((prev) => (prev.includes(email) ? prev : [...prev, email]));
-        setLoginError("Cuenta creada. Revisa tu correo para confirmar el acceso.");
+        setAuthNotice(`Cuenta creada para ${email}. Revisa tu correo electrónico y confirma el enlace para activar tu acceso. Después vuelve aquí e inicia sesión.`);
+        setLoginError("");
         setAuthMode("login");
         setConfirmPassword("");
         return;
@@ -577,6 +586,7 @@ function App() {
 
       setIsAuthenticated(true);
       setLoginError("");
+      setAuthNotice("");
       goToAdminRoute();
       return;
     }
@@ -588,6 +598,7 @@ function App() {
     ) {
       setIsAuthenticated(true);
       setLoginError("");
+      setAuthNotice("");
       goToAdminRoute();
       return;
     }
@@ -677,6 +688,7 @@ function App() {
                   </label>
                 )}
 
+                {authNotice && <p className="admin-login-notice">{authNotice}</p>}
                 {loginError && <p className="admin-login-error">{loginError}</p>}
 
                 <button type="submit" className="button button-light">
@@ -688,6 +700,7 @@ function App() {
                   onClick={() => {
                     setAuthMode((prev) => (prev === "login" ? "register" : "login"));
                     setLoginError("");
+                    setAuthNotice("");
                     setConfirmPassword("");
                   }}
                 >
