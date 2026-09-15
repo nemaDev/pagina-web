@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 
+const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
 const defaultForm = {
   category: "Deportes",
   title: "",
@@ -14,6 +17,7 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
   const [filter, setFilter] = useState("Todos");
   const [notice, setNotice] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const availableCategories = useMemo(
     () => [...new Set([...categories, ...items.map((item) => item.category).filter(Boolean)])],
@@ -28,21 +32,43 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUpload = (event) => {
+  const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // if (file.size > 10000000) {
-    //   setNotice("La imagen es muy grande. Usa una URL o reduce el tamaño antes de guardar.");
-    //   return;
-    // }
+    if (!cloudName || !uploadPreset) {
+      setNotice("Configura VITE_CLOUDINARY_CLOUD_NAME y VITE_CLOUDINARY_UPLOAD_PRESET para subir archivos.");
+      event.target.value = "";
+      return;
+    }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    setIsUploading(true);
+    setNotice("Subiendo imagen a la nube...");
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("upload_preset", uploadPreset);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.secure_url) {
+        throw new Error(data.error?.message || "No se pudo subir la imagen.");
+      }
+
       setNotice("");
-      setFormData((prev) => ({ ...prev, image: reader.result }));
-    };
-    reader.readAsDataURL(file);
+      setFormData((prev) => ({ ...prev, image: data.secure_url }));
+    } catch (error) {
+      setNotice(error.message || "Hubo un problema al subir la imagen.");
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
+    }
   };
 
   const resetForm = () => {
@@ -181,7 +207,12 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
 
           <label className="admin-upload">
             <span>O subir archivo</span>
-            <input type="file" accept="image/*" onChange={handleImageUpload} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isUploading}
+            />
           </label>
 
           {formData.image && (
@@ -191,8 +222,8 @@ function AdminPanel({ items = [], setItems = () => {}, onClose = () => {} }) {
           )}
 
           <div className="admin-actions">
-            <button type="submit" className="button button-light">
-              {editingId ? "Guardar cambios" : "Agregar imagen"}
+            <button type="submit" className="button button-light" disabled={isUploading}>
+              {isUploading ? "Subiendo..." : editingId ? "Guardar cambios" : "Agregar imagen"}
             </button>
             {editingId && (
               <button type="button" className="button button-outline-dark" onClick={resetForm}>
