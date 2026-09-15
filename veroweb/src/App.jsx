@@ -351,6 +351,7 @@ function App() {
     return window.sessionStorage.getItem(ADMIN_LOGIN_KEY) === "true";
   });
   const [loginData, setLoginData] = useState({ username: "", password: "" });
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [authMode, setAuthMode] = useState("login");
 
@@ -528,20 +529,49 @@ function App() {
   const handleLogin = async (event) => {
     event.preventDefault();
 
+    const email = loginData.username.trim().toLowerCase();
+
+    if (authMode === "register") {
+      if (!email || !email.includes("@")) {
+        setLoginError("Escribe un correo electrónico válido.");
+        return;
+      }
+
+      if (loginData.password.length < 6) {
+        setLoginError("La contraseña debe tener al menos 6 caracteres.");
+        return;
+      }
+
+      if (loginData.password !== confirmPassword) {
+        setLoginError("Las contraseñas no coinciden.");
+        return;
+      }
+    }
+
     if (supabaseClient) {
-      const email = loginData.username.trim().toLowerCase();
       const result = authMode === "register"
         ? await supabaseClient.auth.signUp({ email, password: loginData.password })
         : await supabaseClient.auth.signInWithPassword({ email, password: loginData.password });
 
       if (result.error) {
-        setLoginError(result.error.message);
+        const message = result.error.message.toLowerCase();
+        setLoginError(
+          message.includes("already registered") || message.includes("already been registered")
+            ? "Este correo ya tiene una cuenta. Intenta iniciar sesión."
+            : message.includes("invalid email")
+              ? "El correo electrónico no es válido."
+              : message.includes("password")
+                ? "La contraseña no cumple los requisitos mínimos."
+                : `No se pudo completar el acceso: ${result.error.message}`
+        );
         return;
       }
 
       if (authMode === "register" && !result.data.session) {
+        setUserEmails((prev) => (prev.includes(email) ? prev : [...prev, email]));
         setLoginError("Cuenta creada. Revisa tu correo para confirmar el acceso.");
         setAuthMode("login");
+        setConfirmPassword("");
         return;
       }
 
@@ -632,6 +662,21 @@ function App() {
                   />
                 </label>
 
+                {authMode === "register" && (
+                  <label>
+                    <span>Repetir contraseña</span>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="Repite tu contraseña"
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                    />
+                  </label>
+                )}
+
                 {loginError && <p className="admin-login-error">{loginError}</p>}
 
                 <button type="submit" className="button button-light">
@@ -643,6 +688,7 @@ function App() {
                   onClick={() => {
                     setAuthMode((prev) => (prev === "login" ? "register" : "login"));
                     setLoginError("");
+                    setConfirmPassword("");
                   }}
                 >
                   {authMode === "login" ? "Crear una cuenta" : "Ya tengo una cuenta"}
