@@ -10,7 +10,7 @@ export default function Footer({ onNavigate = () => {} }) {
       </div>
 
       <div className="footer-bottom">
-        <span>by trabum digital</span>
+        <span>by trabun digital</span>
 
         <div className="footer-links">
           <a href="https://instagram.com/bajo_milente" target="_blank" rel="noreferrer">Instagram</a>
