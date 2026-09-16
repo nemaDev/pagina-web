@@ -2035,11 +2035,29 @@ img {
   text-transform: uppercase;
 }
 
-.admin-item img {
+.admin-item-media {
+  position: relative;
+  background: #111;
+}
+
+.admin-item-media img,
+.admin-item-media video {
   display: block;
   width: 100%;
   aspect-ratio: 1.35 / 1;
   object-fit: cover;
+}
+
+.admin-media-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 8px;
+  background: rgba(17, 17, 17, 0.78);
+  color: #fff;
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  pointer-events: none;
 }
 
 .admin-item-copy {

@@ -665,7 +665,22 @@ function AdminPanel({
             <div className="admin-items">
               {visibleItems.map((item) => (
                 <div key={item.id} className={`admin-item ${item.visible === false ? "is-hidden" : ""}`}>
-                  <img src={item.image} alt={item.title} />
+                  <div className="admin-item-media">
+                    {item.mediaType === "video" ? (
+                      <video
+                        src={item.image}
+                        controls
+                        muted
+                        playsInline
+                        preload="metadata"
+                        controlsList="nodownload noplaybackrate"
+                        disablePictureInPicture
+                      />
+                    ) : (
+                      <img src={item.image} alt={item.title} />
+                    )}
+                    {item.mediaType === "video" && <span className="admin-media-badge">VIDEO</span>}
+                  </div>
 
                   <div className="admin-item-copy">
                     <span>{item.category}</span>
