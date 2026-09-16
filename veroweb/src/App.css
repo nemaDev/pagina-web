@@ -102,13 +102,19 @@ img {
 
 .nav-link,
 .nav-links a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 12px;
+  margin: -9px -12px;
+  border-radius: 6px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1.5px;
 
   color: rgba(255, 255, 255, 0.8);
 
-  transition: color 0.3s ease;
+  transition: color 0.25s ease, background 0.25s ease, transform 0.25s ease;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -117,6 +123,8 @@ img {
 .nav-link:hover,
 .nav-links a:hover {
   color: white;
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
 }
 
 .nav-link.active {
