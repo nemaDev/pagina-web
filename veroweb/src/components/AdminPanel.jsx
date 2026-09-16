@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CATEGORIES } from "../data/categories";
+import { getVideoPoster } from "../utils/media";
 
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
@@ -9,6 +10,7 @@ const defaultForm = {
   title: "",
   image: "",
   mediaType: "image",
+  poster: "",
   carouselVisible: true,
 };
 
@@ -110,6 +112,7 @@ function AdminPanel({
         ...prev,
         image: data.secure_url,
         mediaType: detectedMediaType,
+        poster: detectedMediaType === "video" ? getVideoPoster(data.secure_url) : "",
       }));
     } catch (error) {
       setNotice(error.message || "Hubo un problema al subir la imagen.");
@@ -293,6 +296,7 @@ function AdminPanel({
       title: formData.title.trim(),
       image: formData.image,
       mediaType: formData.mediaType,
+      poster: formData.poster || "",
       visible: editingId ? items.find((item) => item.id === editingId)?.visible !== false : true,
       carouselVisible: editingId
         ? items.find((item) => item.id === editingId)?.carouselVisible !== false
@@ -318,6 +322,7 @@ function AdminPanel({
       title: item.title,
       image: item.image,
       mediaType: item.mediaType || "image",
+      poster: item.poster || "",
       carouselVisible: item.carouselVisible !== false,
     });
 
@@ -532,7 +537,13 @@ function AdminPanel({
               {formData.image ? (
                 <div className="admin-preview">
                   {formData.mediaType === "video" ? (
-                    <video src={formData.image} controls muted playsInline />
+                    <video
+                      src={formData.image}
+                      poster={getVideoPoster(formData.image, formData.poster)}
+                      controls
+                      muted
+                      playsInline
+                    />
                   ) : (
                     <img src={formData.image} alt="Vista previa" />
                   )}
@@ -669,6 +680,7 @@ function AdminPanel({
                     {item.mediaType === "video" ? (
                       <video
                         src={item.image}
+                        poster={getVideoPoster(item.image, item.poster)}
                         controls
                         muted
                         playsInline

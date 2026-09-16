@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getVideoPoster } from "../utils/media";
 
 const heroBackgrounds = [
   "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=2200&q=90",
@@ -17,6 +18,7 @@ function Hero({ items = [] }) {
       .map((item) => ({
         src: item.image,
         type: item.mediaType === "video" ? "video" : "image",
+        poster: item.poster,
         label: item.category,
         title: item.title,
       }));
@@ -65,6 +67,7 @@ function Hero({ items = [] }) {
             muted
             loop
             playsInline
+            poster={getVideoPoster(activeSlide.src, activeSlide.poster)}
             controlsList="nodownload noplaybackrate"
             disablePictureInPicture
             draggable="false"

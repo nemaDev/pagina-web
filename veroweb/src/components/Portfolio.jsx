@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { getVideoPoster } from "../utils/media";
 
 function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -18,6 +19,7 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
             name: category,
             cover: categoryItems[0]?.image || "",
             mediaType: categoryItems[0]?.mediaType || "image",
+            poster: categoryItems[0]?.poster,
             count: categoryItems.length,
           };
         }),
@@ -95,7 +97,13 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                 onClick={() => openCategory(category.id)}
               >
                 {category.mediaType === "video" ? (
-                  <video src={category.cover} muted playsInline preload="metadata" />
+                  <video
+                    src={category.cover}
+                    poster={getVideoPoster(category.cover, category.poster)}
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
                 ) : (
                   <img src={category.cover} alt={category.name} loading="lazy" />
                 )}
@@ -149,6 +157,7 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                 {item.mediaType === "video" ? (
                   <video
                     src={item.image}
+                    poster={getVideoPoster(item.image, item.poster)}
                     muted
                     playsInline
                     preload="metadata"
@@ -205,6 +214,7 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                   {selectedImage.mediaType === "video" ? (
                     <video
                       src={selectedImage.image}
+                      poster={getVideoPoster(selectedImage.image, selectedImage.poster)}
                       controls
                       autoPlay
                       playsInline
