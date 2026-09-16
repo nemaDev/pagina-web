@@ -742,7 +742,7 @@ function App() {
           )
         ) : (
           <>
-            <Hero />
+            <Hero items={portfolio} />
             <Portfolio
               items={portfolio}
               categories={categories}
