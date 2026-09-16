@@ -84,7 +84,8 @@ function AdminPanel({
     }
 
     setIsUploading(true);
-    const resourceType = formData.mediaType === "video" ? "video" : "image";
+    const detectedMediaType = file.type.startsWith("video/") ? "video" : "image";
+    const resourceType = detectedMediaType;
     setNotice(`Subiendo ${resourceType === "video" ? "video" : "imagen"} a la nube...`);
 
     try {
@@ -104,7 +105,11 @@ function AdminPanel({
       }
 
       setNotice("");
-      setFormData((prev) => ({ ...prev, image: data.secure_url }));
+      setFormData((prev) => ({
+        ...prev,
+        image: data.secure_url,
+        mediaType: detectedMediaType,
+      }));
     } catch (error) {
       setNotice(error.message || "Hubo un problema al subir la imagen.");
     } finally {
@@ -503,7 +508,7 @@ function AdminPanel({
                   <small>{formData.mediaType === "video" ? "MOV, MP4 o WebM" : "JPG, PNG o WebP"} · Se optimiza en la nube</small>
                   <input
                     type="file"
-                    accept={formData.mediaType === "video" ? "video/*,.mov,.mp4,.webm" : "image/*"}
+                    accept="image/*,video/*,.mov,.mp4,.webm"
                     onChange={handleImageUpload}
                     disabled={isUploading}
                   />
