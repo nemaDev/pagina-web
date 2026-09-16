@@ -121,6 +121,7 @@ const normalizePortfolio = (items) =>
   items.map((item, index) => ({
     ...item,
     id: item.id || `${item.category}-${item.title || "item"}-${index}`,
+    mediaType: item.mediaType === "video" ? "video" : "image",
     visible: item.visible !== false,
   }));
 
@@ -216,6 +217,7 @@ const mapSupabaseRows = (rows = []) =>
       category: row.category,
       title: row.title,
       image: row.image,
+      mediaType: row.media_type,
       visible: row.visible,
     }))
   );
@@ -258,6 +260,7 @@ const savePortfolioToSupabase = async (items) => {
     category: item.category,
     title: item.title,
     image: item.image,
+    media_type: item.mediaType || "image",
     visible: item.visible !== false,
     order_index: index,
   }));

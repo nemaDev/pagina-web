@@ -17,6 +17,7 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
             id: category,
             name: category,
             cover: categoryItems[0]?.image || "",
+            mediaType: categoryItems[0]?.mediaType || "image",
             count: categoryItems.length,
           };
         }),
@@ -93,7 +94,11 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                 key={category.id}
                 onClick={() => openCategory(category.id)}
               >
-                <img src={category.cover} alt={category.name} loading="lazy" />
+                {category.mediaType === "video" ? (
+                  <video src={category.cover} muted playsInline preload="metadata" />
+                ) : (
+                  <img src={category.cover} alt={category.name} loading="lazy" />
+                )}
 
                 <div className="portfolio-overlay">
                   <div>
@@ -141,7 +146,11 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                 onClick={() => setSelectedImage(item)}
                 aria-label={`Abrir imagen ${item.title}`}
               >
-                <img src={item.image} alt={item.title} loading="lazy" />
+                {item.mediaType === "video" ? (
+                  <video src={item.image} muted playsInline preload="metadata" />
+                ) : (
+                  <img src={item.image} alt={item.title} loading="lazy" />
+                )}
                 <div className="portfolio-detail-info">
                   <span>{item.category}</span>
                   <strong>{item.title}</strong>
@@ -185,7 +194,11 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                 </div>
 
                 <div className="portfolio-lightbox-media">
-                  <img src={selectedImage.image} alt={selectedImage.title} />
+                  {selectedImage.mediaType === "video" ? (
+                    <video src={selectedImage.image} controls autoPlay playsInline />
+                  ) : (
+                    <img src={selectedImage.image} alt={selectedImage.title} />
+                  )}
                 </div>
                 <div className="portfolio-lightbox-copy">
                   <span>{selectedImage.category}</span>
