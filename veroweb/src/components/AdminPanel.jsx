@@ -9,6 +9,7 @@ const defaultForm = {
   title: "",
   image: "",
   mediaType: "image",
+  carouselVisible: true,
 };
 
 function AdminPanel({
@@ -237,6 +238,12 @@ function AdminPanel({
     )));
   };
 
+  const toggleCarouselVisibility = (id) => {
+    setItems((prev) => prev.map((item) => (
+      item.id === id ? { ...item, carouselVisible: item.carouselVisible === false } : item
+    )));
+  };
+
   const toggleCategoryVisibility = (category) => {
     setCategoryVisibility((prev) => ({
       ...prev,
@@ -287,6 +294,9 @@ function AdminPanel({
       image: formData.image,
       mediaType: formData.mediaType,
       visible: editingId ? items.find((item) => item.id === editingId)?.visible !== false : true,
+      carouselVisible: editingId
+        ? items.find((item) => item.id === editingId)?.carouselVisible !== false
+        : true,
     };
 
     if (editingId) {
@@ -308,6 +318,7 @@ function AdminPanel({
       title: item.title,
       image: item.image,
       mediaType: item.mediaType || "image",
+      carouselVisible: item.carouselVisible !== false,
     });
 
     window.requestAnimationFrame(() => {
@@ -662,6 +673,9 @@ function AdminPanel({
                   </div>
 
                   <div className="admin-item-actions">
+                    <button type="button" onClick={() => toggleCarouselVisibility(item.id)}>
+                      {item.carouselVisible === false ? "Añadir al carrusel" : "Quitar del carrusel"}
+                    </button>
                     <button type="button" onClick={() => toggleItemVisibility(item.id)}>
                       {item.visible === false ? "Mostrar" : "Ocultar"}
                     </button>

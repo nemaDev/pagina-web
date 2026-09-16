@@ -12,7 +12,7 @@ function Hero({ items = [] }) {
 
   const slides = useMemo(() => {
     const portfolioSlides = items
-      .filter((item) => item.visible !== false && item.image)
+      .filter((item) => item.visible !== false && item.carouselVisible !== false && item.image)
       .slice(0, 6)
       .map((item) => ({
         src: item.image,
@@ -59,9 +59,18 @@ function Hero({ items = [] }) {
         aria-hidden="true"
       >
         {activeSlide.type === "video" ? (
-          <video src={activeSlide.src} autoPlay muted loop playsInline />
+          <video
+            src={activeSlide.src}
+            autoPlay
+            muted
+            loop
+            playsInline
+            controlsList="nodownload noplaybackrate"
+            disablePictureInPicture
+            draggable="false"
+          />
         ) : (
-          <img src={activeSlide.src} alt="" />
+          <img src={activeSlide.src} alt="" draggable="false" />
         )}
       </div>
 

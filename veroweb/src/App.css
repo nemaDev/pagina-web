@@ -58,6 +58,14 @@ img {
   overflow: hidden;
 }
 
+.hero img,
+.hero video,
+.portfolio img,
+.portfolio video {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 /* =========================
    NAVBAR
 ========================= */

@@ -147,9 +147,17 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
                 aria-label={`Abrir imagen ${item.title}`}
               >
                 {item.mediaType === "video" ? (
-                  <video src={item.image} muted playsInline preload="metadata" />
+                  <video
+                    src={item.image}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    controlsList="nodownload noplaybackrate"
+                    disablePictureInPicture
+                    draggable="false"
+                  />
                 ) : (
-                  <img src={item.image} alt={item.title} loading="lazy" />
+                  <img src={item.image} alt={item.title} loading="lazy" draggable="false" />
                 )}
                 <div className="portfolio-detail-info">
                   <span>{item.category}</span>
@@ -195,9 +203,17 @@ function Portfolio({ items = [], categories = [], categoryVisibility = {} }) {
 
                 <div className="portfolio-lightbox-media">
                   {selectedImage.mediaType === "video" ? (
-                    <video src={selectedImage.image} controls autoPlay playsInline />
+                    <video
+                      src={selectedImage.image}
+                      controls
+                      autoPlay
+                      playsInline
+                      controlsList="nodownload noplaybackrate"
+                      disablePictureInPicture
+                      draggable="false"
+                    />
                   ) : (
-                    <img src={selectedImage.image} alt={selectedImage.title} />
+                    <img src={selectedImage.image} alt={selectedImage.title} draggable="false" />
                   )}
                 </div>
                 <div className="portfolio-lightbox-copy">

@@ -123,6 +123,7 @@ const normalizePortfolio = (items) =>
     id: item.id || `${item.category}-${item.title || "item"}-${index}`,
     mediaType: item.mediaType === "video" ? "video" : "image",
     visible: item.visible !== false,
+    carouselVisible: item.carouselVisible !== false,
   }));
 
 const getInitialPortfolio = () => {
@@ -219,6 +220,7 @@ const mapSupabaseRows = (rows = []) =>
       image: row.image,
       mediaType: row.media_type,
       visible: row.visible,
+      carouselVisible: row.carousel_visible,
     }))
   );
 
@@ -262,6 +264,7 @@ const savePortfolioToSupabase = async (items) => {
     image: item.image,
     media_type: item.mediaType || "image",
     visible: item.visible !== false,
+    carousel_visible: item.carouselVisible !== false,
     order_index: index,
   }));
 
@@ -522,6 +525,33 @@ function App() {
     if (typeof window === "undefined") return;
     window.sessionStorage.setItem(ADMIN_LOGIN_KEY, isAuthenticated ? "true" : "false");
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || isAdminRoute) return undefined;
+
+    const blockContextMenu = (event) => event.preventDefault();
+    const blockDrag = (event) => {
+      if (event.target instanceof Element && event.target.matches("img, video")) {
+        event.preventDefault();
+      }
+    };
+    const blockSaveShortcuts = (event) => {
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && ["s", "u"].includes(key)) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener("contextmenu", blockContextMenu);
+    document.addEventListener("dragstart", blockDrag);
+    document.addEventListener("keydown", blockSaveShortcuts);
+
+    return () => {
+      document.removeEventListener("contextmenu", blockContextMenu);
+      document.removeEventListener("dragstart", blockDrag);
+      document.removeEventListener("keydown", blockSaveShortcuts);
+    };
+  }, [isAdminRoute]);
 
   useEffect(() => {
     if (!supabaseClient) return;
