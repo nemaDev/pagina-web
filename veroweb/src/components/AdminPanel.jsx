@@ -8,6 +8,7 @@ const defaultForm = {
   category: DEFAULT_CATEGORIES[0],
   title: "",
   image: "",
+  mediaType: "image",
 };
 
 function AdminPanel({
@@ -83,14 +84,15 @@ function AdminPanel({
     }
 
     setIsUploading(true);
-    setNotice("Subiendo imagen a la nube...");
+    const resourceType = formData.mediaType === "video" ? "video" : "image";
+    setNotice(`Subiendo ${resourceType === "video" ? "video" : "imagen"} a la nube...`);
 
     try {
       const form = new FormData();
       form.append("file", file);
       form.append("upload_preset", uploadPreset);
 
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
         method: "POST",
         body: form,
       });
@@ -278,6 +280,7 @@ function AdminPanel({
       category: formData.category,
       title: formData.title.trim(),
       image: formData.image,
+      mediaType: formData.mediaType,
       visible: editingId ? items.find((item) => item.id === editingId)?.visible !== false : true,
     };
 
@@ -299,6 +302,7 @@ function AdminPanel({
       category: item.category,
       title: item.title,
       image: item.image,
+      mediaType: item.mediaType || "image",
     });
 
     window.requestAnimationFrame(() => {
@@ -476,8 +480,15 @@ function AdminPanel({
               </div>
 
               <div className="admin-source-grid">
+                        <label>
+                          <span>Tipo de contenido</span>
+                          <select name="mediaType" value={formData.mediaType} onChange={updateForm}>
+                            <option value="image">Fotografía</option>
+                            <option value="video">Video</option>
+                          </select>
+                        </label>
                 <label>
-                  <span>URL de la imagen</span>
+                          <span>URL del {formData.mediaType === "video" ? "video" : "archivo"}</span>
                   <input
                     type="url"
                     name="image"
@@ -489,14 +500,14 @@ function AdminPanel({
 
                 <label className="admin-upload">
                   <strong>Sube desde tu dispositivo</strong>
-                  <small>JPG, PNG o WebP · Se optimiza en la nube</small>
+                  <small>{formData.mediaType === "video" ? "MOV, MP4 o WebM" : "JPG, PNG o WebP"} · Se optimiza en la nube</small>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={formData.mediaType === "video" ? "video/*,.mov,.mp4,.webm" : "image/*"}
                     onChange={handleImageUpload}
                     disabled={isUploading}
                   />
-                  <span>{isUploading ? "Subiendo imagen..." : "Elegir archivo"}</span>
+                  <span>{isUploading ? "Subiendo..." : "Elegir archivo"}</span>
                 </label>
               </div>
             </div>
@@ -504,7 +515,11 @@ function AdminPanel({
             <div className={`admin-media-column ${formData.image ? "has-image" : ""}`}>
               {formData.image ? (
                 <div className="admin-preview">
-                  <img src={formData.image} alt="Vista previa" />
+                  {formData.mediaType === "video" ? (
+                    <video src={formData.image} controls muted playsInline />
+                  ) : (
+                    <img src={formData.image} alt="Vista previa" />
+                  )}
                   <span>Vista previa</span>
                 </div>
               ) : (
@@ -518,7 +533,7 @@ function AdminPanel({
 
           <div className="admin-actions">
             <button type="submit" className="button button-light" disabled={isUploading}>
-              {isUploading ? "Subiendo..." : activeSection === "upload" ? "Agregar imagen" : "Guardar cambios"}
+              {isUploading ? "Subiendo..." : activeSection === "upload" ? "Subir Archivo" : "Guardar cambios"}
             </button>
             {editingId && (
               <button type="button" className="button button-outline-dark" onClick={resetForm}>
