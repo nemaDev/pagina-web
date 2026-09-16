@@ -278,6 +278,7 @@ function AdminPanel({
       category: formData.category,
       title: formData.title.trim(),
       image: formData.image,
+      visible: editingId ? items.find((item) => item.id === editingId)?.visible !== false : true,
     };
 
     if (editingId) {

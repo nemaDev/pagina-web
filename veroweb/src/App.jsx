@@ -216,6 +216,7 @@ const mapSupabaseRows = (rows = []) =>
       category: row.category,
       title: row.title,
       image: row.image,
+      visible: row.visible,
     }))
   );
 
@@ -234,11 +235,21 @@ const fetchPortfolioFromSupabase = async () => {
     return null;
   }
 
-  return data && data.length ? mapSupabaseRows(data) : null;
+  return data ? mapSupabaseRows(data) : null;
 };
 
 const savePortfolioToSupabase = async (items) => {
   if (!supabaseClient) {
+    return;
+  }
+
+  const { error: deleteError } = await supabaseClient
+    .from("portfolio_items")
+    .delete()
+    .not("id", "is", null);
+
+  if (deleteError) {
+    console.warn("No se pudieron sincronizar las eliminaciones del portafolio:", deleteError.message);
     return;
   }
 
@@ -247,12 +258,13 @@ const savePortfolioToSupabase = async (items) => {
     category: item.category,
     title: item.title,
     image: item.image,
+    visible: item.visible !== false,
     order_index: index,
   }));
 
-  const { error } = await supabaseClient.from("portfolio_items").upsert(rows, {
-    onConflict: "id",
-  });
+  const { error } = rows.length
+    ? await supabaseClient.from("portfolio_items").upsert(rows, { onConflict: "id" })
+    : { error: null };
 
   if (error) {
     console.warn("No se pudo guardar el portafolio en Supabase:", error.message);
@@ -276,7 +288,17 @@ const fetchCategoriesFromSupabase = async () => {
 };
 
 const saveCategoriesToSupabase = async (categories, categoryVisibility) => {
-  if (!supabaseClient || !categories.length) return;
+  if (!supabaseClient) return;
+
+  const { error: deleteError } = await supabaseClient
+    .from("portfolio_categories")
+    .delete()
+    .not("name", "is", null);
+
+  if (deleteError) {
+    console.warn("No se pudieron sincronizar las eliminaciones de categorías:", deleteError.message);
+    return;
+  }
 
   const rows = categories.map((name, index) => ({
     name,
@@ -284,9 +306,9 @@ const saveCategoriesToSupabase = async (categories, categoryVisibility) => {
     order_index: index,
   }));
 
-  const { error } = await supabaseClient.from("portfolio_categories").upsert(rows, {
-    onConflict: "name",
-  });
+  const { error } = rows.length
+    ? await supabaseClient.from("portfolio_categories").upsert(rows, { onConflict: "name" })
+    : { error: null };
 
   if (error) {
     console.warn("No se pudieron guardar las categorías en Supabase:", error.message);
@@ -402,7 +424,7 @@ function App() {
       const remotePortfolio = await fetchPortfolioFromSupabase();
       if (!active || !remotePortfolio) return;
 
-      setPortfolio(remotePortfolio);
+      if (remotePortfolio.length) setPortfolio(remotePortfolio);
       hasLoadedRemotePortfolio.current = true;
     };
 
